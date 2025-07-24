@@ -5,8 +5,7 @@ import (
 )
 
 func TestMod3FSM(t *testing.T) {
-	Q, inputs, q0, F, sigma := CreateMod3FSM()
-	prevState := q0
+	mod3 := CreateMod3FSM()
 	tests := []struct {
 		name     string
 		input    string
@@ -14,37 +13,33 @@ func TestMod3FSM(t *testing.T) {
 	}{
 		{"110 get 0", "110", 0},
 		{"1010 get 1", "1010", 1},
+		{"1101 get 1", "1101", 1},
+		{"1110 get 2", "1110", 2},
+		{"1111 get 0", "1111", 0},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			var finalState State
+			prevState := mod3.Q0
+			var finalState *State
 			for _, r := range test.input {
-				if _, ok := inputs[r]; !ok {
-					t.Errorf("invalid input :%v", r)
+				if _, ok := mod3.Sigma[r]; !ok {
+					t.Errorf("test: %s, invalid input :%v", test.name, r)
 				}
-				transition := Transition{
-					Start: prevState,
-					Input: r,
-				}
-				Output, ok := sigma[transition]
-				if !ok {
-					t.Errorf("impossible transaction: %v", transition)
-				}
-				//check the output is valid
-				if _, ok = Q[Output]; !ok {
-					t.Errorf("invalid state: %v", Output)
+				Output := mod3.Delta(prevState, r)
+				if Output == nil {
+					t.Errorf("test: %s, input %v is not allowed for State %v", test.name, r, prevState)
 				}
 
 				prevState = Output
 				finalState = Output
 			}
-			result, ok := F[finalState]
+			result, ok := mod3.F[finalState.Name]
 			if !ok {
 				t.Errorf("impossible finalState: %v", finalState)
 			}
-			if result != test.expected {
-				t.Errorf("wrong result. expected: %d, actual: %d", 0, result)
+			if result.Output != test.expected {
+				t.Errorf("test: %s, wrong result. expected: %d, actual: %d", test.name, test.expected, result.Output)
 			}
 		})
 	}
